@@ -40,20 +40,27 @@ $res = $conn->query("SELECT * FROM santri $id_filter ORDER BY name ASC");
         <?php while($row = $res->fetch_assoc()): ?>
             <div class="id-card">
                 <div class="id-card-header">
-                    KARTU IDENTITAS MURID
-                    <br><small><?= htmlspecialchars($app_settings['app_name']) ?></small>
+                    <span class="inst-name"><?= htmlspecialchars($app_settings['app_name']) ?></span>
+                    <span class="card-label"><?= htmlspecialchars($app_settings['card_title'] ?? 'KARTU IDENTITAS MURID') ?></span>
                 </div>
                 <div class="id-card-body">
-                    <h5 class="fw-bold mb-0"><?= htmlspecialchars($row['name']) ?></h5>
-                    <p class="text-muted small mb-2">NIS: <?= htmlspecialchars($row['nis']) ?> | Kelas: <?= htmlspecialchars($row['class_name']) ?></p>
+                    <div class="id-phone-photo-wrap">
+                        <?php if(!empty($row['photo'])): ?>
+                            <img src="../assets/images/<?= htmlspecialchars($row['photo']) ?>" alt="Foto">
+                        <?php else: ?>
+                            <img src="https://ui-avatars.com/api/?name=<?= urlencode($row['name']) ?>&background=random&size=128" alt="Avatar">
+                        <?php endif; ?>
+                    </div>
+                    
+                    <h5 class="id-card-name"><?= htmlspecialchars($row['name']) ?></h5>
+                    <p class="id-card-info">NIS: <?= htmlspecialchars($row['nis']) ?> | Kelas: <?= htmlspecialchars($row['class_name']) ?></p>
                     
                     <div class="id-card-qrcode">
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<?= $row['qrcode_hash'] ?>" alt="QR" width="120" class="border p-1 rounded">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<?= $row['qrcode_hash'] ?>" alt="QR" width="90">
                     </div>
                 </div>
                 <div class="id-card-footer">
-                    Gunakan kartu ini untuk absensi digital.<br>
-                    Harap tidak merusak atau mencoret barcode.
+                    <?= !empty($app_settings['card_footer']) ? $app_settings['card_footer'] : "Gunakan kartu ini untuk absensi digital.<br>\nHarap tidak merusak atau mencoret barcode." ?>
                 </div>
             </div>
         <?php endwhile; ?>

@@ -315,26 +315,39 @@ body {
 }
 
 .id-card {
-    width: 6.5cm;
-    height: 10.2cm;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
+    width: 6.8cm;
+    height: 10.5cm;
+    border-radius: 20px;
     overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    margin: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    margin: 15px;
     display: inline-block;
     background: white;
     position: relative;
-    border: 1px solid #3b82f6; /* Accent border */
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    text-align: left;
+    font-family: 'Outfit', sans-serif;
 }
 .id-card-header {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
     color: white;
-    padding: 12px 10px;
+    padding: 15px 10px;
     text-align: center;
-    font-weight: 700;
-    font-size: 0.85rem;
+    position: relative;
+    border-bottom: 4px solid #3b82f6;
+}
+.id-card-header .inst-name {
+    font-size: 0.7rem;
+    font-weight: 500;
     text-transform: uppercase;
+    letter-spacing: 1.5px;
+    opacity: 0.9;
+    display: block;
+    margin-bottom: 2px;
+}
+.id-card-header .card-label {
+    font-size: 0.85rem;
+    font-weight: 700;
     letter-spacing: 0.5px;
 }
 .id-card-body {
@@ -343,23 +356,55 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    height: calc(100% - 110px); /* Adjust to leave space for header/footer */
+}
+.id-phone-photo-wrap {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    overflow: hidden;
+    margin-bottom: 8px;
+    background: #f1f5f9;
+}
+.id-phone-photo-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.id-card-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0px;
+    line-height: 1.2;
+}
+.id-card-info {
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-bottom: 10px;
 }
 .id-card-qrcode {
-    margin: 10px 0;
+    background: #fff;
+    padding: 5px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    display: inline-block;
 }
 .id-card-qrcode img {
-    max-width: 100%;
+    display: block;
+    max-width: 90px;
+    height: auto;
 }
 .id-card-footer {
     background: #f8fafc;
-    padding: 8px 10px;
+    padding: 10px 15px;
     text-align: center;
     font-size: 0.65rem;
     color: #64748b;
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid #f1f5f9;
     position: absolute;
     bottom: 0;
     width: 100%;
+    line-height: 1.4;
 }

@@ -1,3 +1,4 @@
+<?php
 require_once 'header.php';
 
 // Auto-Migration for Card Customization Columns
