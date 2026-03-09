@@ -1,0 +1,78 @@
+<?php
+require_once 'includes/db.php';
+
+if (!isset($_GET['hash'])) {
+    die("Akses ditolak.");
+}
+
+$hash = $conn->real_escape_string($_GET['hash']);
+$res = $conn->query("SELECT * FROM santri WHERE qrcode_hash = '$hash'");
+
+if ($res->num_rows == 0) {
+    die("Data tidak ditemukan.");
+}
+
+$row = $res->fetch_assoc();
+?>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kartu Identitas - <?= htmlspecialchars($row['name']) ?></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .id-card { margin: 0 auto; box-shadow: 0 30px 60px -12px rgba(0,0,0,0.25); }
+        .btn-print { margin-top: 25px; }
+        @media print { .no-print { display: none !important; } .id-card { box-shadow: none; border: 1px solid #e2e8f0; } }
+    </style>
+</head>
+<body>
+
+<div class="text-center">
+    <div class="id-card">
+        <div class="id-card-header">
+            <span class="inst-name"><?= htmlspecialchars($app_settings['app_name']) ?></span>
+            <span class="card-label"><?= htmlspecialchars($app_settings['card_title'] ?? 'KARTU IDENTITAS MURID') ?></span>
+        </div>
+        <div class="id-card-body">
+            <div class="id-phone-photo-wrap">
+                <?php if(!empty($row['photo'])): ?>
+                    <img src="assets/images/<?= htmlspecialchars($row['photo']) ?>" alt="Foto">
+                <?php else: ?>
+                    <img src="https://ui-avatars.com/api/?name=<?= urlencode($row['name']) ?>&background=random&size=128" alt="Avatar">
+                <?php endif; ?>
+            </div>
+            
+            <h5 class="id-card-name"><?= htmlspecialchars($row['name']) ?></h5>
+            <p class="id-card-info">NIS: <?= htmlspecialchars($row['nis']) ?> | Kelas: <?= htmlspecialchars($row['class_name']) ?></p>
+            
+            <div class="id-card-qrcode">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<?= $row['qrcode_hash'] ?>" alt="QR" width="90">
+            </div>
+        </div>
+        <div class="id-card-footer">
+            <?= !empty($app_settings['card_footer']) ? $app_settings['card_footer'] : "Gunakan kartu ini untuk absensi digital.<br>\nHarap tidak merusak atau mencoret barcode." ?>
+        </div>
+    </div>
+
+    <div class="no-print mt-4 d-flex gap-2 justify-content-center">
+        <button onclick="window.print()" class="btn btn-primary rounded-pill px-4 shadow-sm">
+            <i class="fas fa-print me-2"></i> Cetak Sekarang
+        </button>
+    </div>
+    <p class="no-print mt-3 text-muted small">Silakan simpan halaman ini sebagai backup kartu digital Anda.</p>
+</div>
+
+</body>
+</html>
