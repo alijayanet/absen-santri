@@ -18,6 +18,39 @@ if (isset($_GET['delete'])) {
     exit;
 }
 
+// Handle Send Card to WA
+if (isset($_GET['send_card'])) {
+    require_once '../includes/mpwa_helper.php';
+    $id = (int)$_GET['send_card'];
+    
+    $q = $conn->query("SELECT * FROM santri WHERE id = $id");
+    if($s = $q->fetch_assoc()) {
+        $parent_phone = $s['parent_phone'];
+        $name = $s['name'];
+        $hash = $s['qrcode_hash'];
+        
+        // Build Link
+        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+        $host = $_SERVER['HTTP_HOST'];
+        $path = str_replace('admin/santri.php', '', $_SERVER['PHP_SELF']);
+        $path = trim($path, '/');
+        $card_url = "$protocol://$host/$path/view_card.php?hash=$hash";
+        
+        // Template Message
+        $msg_tpl = $app_settings['wa_card_message'] ?? "Halo, berikut adalah *Kartu Identitas Digital* [nama] untuk absensi di [instansi]. Silakan simpan link berikut untuk mencetak mandiri:\n\n[link]";
+        $msg = str_replace(['[nama]', '[instansi]', '[link]'], [$name, $app_settings['app_name'], $card_url], $msg_tpl);
+        
+        $res = send_wa_notification($app_settings['mpwa_url'], $app_settings['mpwa_token'], $app_settings['mpwa_sender'], $parent_phone, $msg);
+        
+        if($res) {
+            echo "<script>window.location='santri.php?msg=sent&to=".urlencode($name)."';</script>";
+        } else {
+            echo "<script>alert('Gagal mengirim WhatsApp. Cek konfigurasi MPWA.'); window.location='santri.php';</script>";
+        }
+    }
+    exit;
+}
+
 // Handle Add/Edit
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $nis = $conn->real_escape_string($_POST['nis']);
@@ -128,6 +161,7 @@ $res = $conn->query("SELECT * FROM santri ORDER BY id DESC");
         elseif($_GET['msg'] == 'updated') echo "Data murid berhasil diperbarui!";
         elseif($_GET['msg'] == 'deleted') echo "Data murid berhasil dihapus!";
         elseif($_GET['msg'] == 'imported') echo "Data murid berhasil diimpor dari CSV!";
+        elseif($_GET['msg'] == 'sent') echo "Kartu digital " . htmlspecialchars($_GET['to'] ?? '') . " berhasil dikirim ke nomor wali!";
         else echo "Tugas berhasil disimpan!";
         ?>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -177,6 +211,9 @@ $res = $conn->query("SELECT * FROM santri ORDER BY id DESC");
                                     </button>
                                 </td>
                                 <td class="text-end">
+                                    <a href="santri.php?send_card=<?= $row['id'] ?>" class="btn btn-sm btn-outline-success border-0" title="Kirim Kartu ke WA Wali">
+                                        <i class="fab fa-whatsapp"></i>
+                                    </a>
                                     <button type="button" class="btn btn-sm btn-warning text-white" data-bs-toggle="modal" data-bs-target="#modalEdit<?= $row['id'] ?>">
                                         <i class="fas fa-edit"></i>
                                     </button>

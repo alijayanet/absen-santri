@@ -10,6 +10,10 @@ $check_cols = $conn->query("SHOW COLUMNS FROM settings LIKE 'card_footer'");
 if ($check_cols->num_rows == 0) {
     $conn->query("ALTER TABLE settings ADD COLUMN card_footer TEXT");
 }
+$check_cols = $conn->query("SHOW COLUMNS FROM settings LIKE 'wa_card_message'");
+if ($check_cols->num_rows == 0) {
+    $conn->query("ALTER TABLE settings ADD COLUMN wa_card_message TEXT");
+}
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $app_name = $conn->real_escape_string($_POST['app_name']);
@@ -21,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $scanner_announcement = $conn->real_escape_string($_POST['scanner_announcement']);
     $card_title = $conn->real_escape_string($_POST['card_title']);
     $card_footer = $conn->real_escape_string($_POST['card_footer']);
+    $wa_card_message = $conn->real_escape_string($_POST['wa_card_message']);
     
     if (strpos($admin_phone, '0') === 0) {
         $admin_phone = '62' . substr($admin_phone, 1);
@@ -32,9 +37,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Check if exists
     $cek = $conn->query("SELECT id FROM settings LIMIT 1");
     if ($cek->num_rows > 0) {
-        $conn->query("UPDATE settings SET app_name='$app_name', institution_type='$institution_type', mpwa_url='$mpwa_url', mpwa_token='$mpwa_token', mpwa_sender='$mpwa_sender', admin_phone='$admin_phone', scanner_announcement='$scanner_announcement', card_title='$card_title', card_footer='$card_footer'");
+        $conn->query("UPDATE settings SET app_name='$app_name', institution_type='$institution_type', mpwa_url='$mpwa_url', mpwa_token='$mpwa_token', mpwa_sender='$mpwa_sender', admin_phone='$admin_phone', scanner_announcement='$scanner_announcement', card_title='$card_title', card_footer='$card_footer', wa_card_message='$wa_card_message'");
     } else {
-        $conn->query("INSERT INTO settings (app_name, institution_type, mpwa_url, mpwa_token, mpwa_sender, admin_phone, scanner_announcement, card_title, card_footer) VALUES ('$app_name', '$institution_type', '$mpwa_url', '$mpwa_token', '$mpwa_sender', '$admin_phone', '$scanner_announcement', '$card_title', '$card_footer')");
+        $conn->query("INSERT INTO settings (app_name, institution_type, mpwa_url, mpwa_token, mpwa_sender, admin_phone, scanner_announcement, card_title, card_footer, wa_card_message) VALUES ('$app_name', '$institution_type', '$mpwa_url', '$mpwa_token', '$mpwa_sender', '$admin_phone', '$scanner_announcement', '$card_title', '$card_footer', '$wa_card_message')");
     }
     
     // Refresh admin credentials optionally (Not strictly required here, but logic is added later if needed)
@@ -110,6 +115,13 @@ if (isset($_POST['test_wa'])) {
                     <div class="mb-4">
                         <label class="form-label">Keterangan / Aturan Kartu (<small>Format HTML diperbolehkan</small>)</label>
                         <textarea name="card_footer" class="form-control" rows="3" placeholder="Misal: Gunakan kartu ini untuk absensi digital..."><?= htmlspecialchars($app_settings['card_footer'] ?? "Gunakan kartu ini untuk absensi digital.<br>\nHarap tidak merusak atau mencoret barcode.") ?></textarea>
+                    </div>
+
+                    <h6 class="fw-bold text-dark mb-3 border-top pt-4"><i class="fas fa-paper-plane me-2"></i>Pesan Pengiriman Kartu (WA)</h6>
+                    <div class="mb-4">
+                        <label class="form-label">Teks Pesan Saat Mengirim Kartu ke Wali</label>
+                        <textarea name="wa_card_message" class="form-control" rows="3" placeholder="Misal: Halo, berikut adalah kartu identitas digital anak Anda..."><?= htmlspecialchars($app_settings['wa_card_message'] ?? "Halo, berikut adalah *Kartu Identitas Digital* [nama] untuk absensi di [instansi]. Silakan simpan gambar ini atau buka link berikut untuk mencetak mandiri:\n\n[link]") ?></textarea>
+                        <div class="form-text small">Gunakan <code>[nama]</code> untuk nama murid, <code>[instansi]</code> untuk nama sekolah, dan <code>[link]</code> untuk link kartu.</div>
                     </div>
 
                     <h6 class="fw-bold text-success mb-3 border-top pt-4"><i class="fab fa-whatsapp me-2"></i>Integrasi MPWA (WhatsApp)</h6>
