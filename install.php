@@ -85,6 +85,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['install'])) {
               `admin_phone` varchar(20) DEFAULT '',
               `institution_type` varchar(50) DEFAULT 'pesantren',
               `scanner_announcement` text DEFAULT 'Selamat datang di layanan Absensi Digital kami. Silakan siapkan QR Code Anda untuk melakukan pemindaian.',
+              `card_title` varchar(255) DEFAULT 'KARTU IDENTITAS MURID',
+              `card_footer` text DEFAULT 'Gunakan kartu ini untuk absensi digital.<br>\nHarap tidak merusak atau mencoret barcode.',
               PRIMARY KEY (`id`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
         ];
@@ -102,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['install'])) {
 
         $cek_settings = $conn->query("SELECT id FROM settings LIMIT 1");
         if ($cek_settings->num_rows == 0) {
-            $conn->query("INSERT INTO settings (app_name, institution_type) VALUES ('Absen Santri Digital', 'pesantren')");
+            $conn->query("INSERT INTO settings (app_name, institution_type, card_title, card_footer) VALUES ('Absen Santri Digital', 'pesantren', 'KARTU IDENTITAS MURID', 'Gunakan kartu ini untuk absensi digital.<br>\nHarap tidak merusak atau mencoret barcode.')");
         }
 
         // 5. Generate db.php
