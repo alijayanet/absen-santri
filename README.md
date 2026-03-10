@@ -1,4 +1,4 @@
-# 🏫 Absen Santri Digital (v2.0)
+# 🏫 Absen Santri/Karyawan Digital (v2.0)
 
 [![PHP Version](https://img.shields.io/badge/php-%3E%3D%207.4-8892bf.svg)](https://www.php.net/)
 [![MySQL](https://img.shields.io/badge/mysql-%2300f.svg?style=flat&logo=mysql&logoColor=white)](https://www.mysql.com/)
