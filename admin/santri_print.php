@@ -8,12 +8,17 @@ if (!isset($_SESSION['admin_logged_in'])) {
 }
 
 $id_filter = "";
+$filter_label = "Semua";
 if (isset($_GET['id'])) {
     $id = (int)$_GET['id'];
     $id_filter = "WHERE id = $id";
+} elseif (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
+    $kelas = $conn->real_escape_string($_GET['kelas']);
+    $id_filter = "WHERE class_name = '$kelas'";
+    $filter_label = htmlspecialchars($_GET['kelas']);
 }
 
-$res = $conn->query("SELECT * FROM santri $id_filter ORDER BY name ASC");
+$res = $conn->query("SELECT * FROM santri $id_filter ORDER BY class_name ASC, name ASC");
 ?>
 <!DOCTYPE html>
 <html lang="id">

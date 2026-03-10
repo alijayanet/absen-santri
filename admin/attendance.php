@@ -2,12 +2,19 @@
 require_once 'header.php';
 
 $filter_date = isset($_GET['date']) ? $conn->real_escape_string($_GET['date']) : date('Y-m-d');
+$filter_class = isset($_GET['kelas']) ? $conn->real_escape_string($_GET['kelas']) : '';
+$class_list = $conn->query("SELECT DISTINCT class_name FROM santri ORDER BY class_name ASC");
+
+$class_where = '';
+if (!empty($filter_class)) {
+    $class_where = "AND s.class_name = '$filter_class'";
+}
 
 $sql = "
     SELECT a.*, s.nis, s.name, s.class_name, s.gender 
     FROM attendance a 
     JOIN santri s ON a.santri_id = s.id 
-    WHERE a.scan_date = '$filter_date'
+    WHERE a.scan_date = '$filter_date' $class_where
     ORDER BY a.scan_time DESC
 ";
 $res = $conn->query($sql);
@@ -40,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['manual_attendance'])) 
         <button class="btn btn-success btn-sm rounded-pill px-3 me-2" data-bs-toggle="modal" data-bs-target="#modalManual">
             <i class="fas fa-plus-circle me-1"></i> Input Manual (S/I/A)
         </button>
-        <a href="attendance_print.php?date=<?= $filter_date ?>" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+        <a href="attendance_print.php?date=<?= $filter_date ?><?= !empty($filter_class) ? '&kelas='.urlencode($filter_class) : '' ?>" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill px-3">
             <i class="fas fa-print me-1"></i> Cetak Laporan
         </a>
     </div>
@@ -56,14 +63,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['manual_attendance'])) 
 <div class="card shadow-sm border-0 mb-4">
     <div class="card-body">
         <form method="GET" class="row align-items-end g-3">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label fw-medium"><i class="far fa-calendar-alt me-1"></i> Pilih Tanggal</label>
                 <input type="date" name="date" class="form-control" value="<?= $filter_date ?>">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-medium"><i class="fas fa-filter me-1"></i> Filter Kelas</label>
+                <select name="kelas" class="form-select">
+                    <option value="">-- Semua Kelas --</option>
+                    <?php while($c = $class_list->fetch_assoc()): ?>
+                        <option value="<?= htmlspecialchars($c['class_name']) ?>" <?= $filter_class == $c['class_name'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($c['class_name']) ?>
+                        </option>
+                    <?php endwhile; ?>
+                </select>
             </div>
             <div class="col-md-2">
                 <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search"></i> Tampilkan</button>
             </div>
-            <div class="col-md-6 text-md-end mt-3 mt-md-0">
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
                 <div class="border rounded px-3 py-2 d-inline-block bg-light">
                     <span class="text-muted small">Total Hadir:</span>
                     <span class="fw-bold ms-2 text-success fs-5"><?= $hadir ?> Orang</span>

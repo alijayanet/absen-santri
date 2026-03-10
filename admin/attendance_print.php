@@ -8,12 +8,18 @@ if (!isset($_SESSION['admin_logged_in'])) {
 }
 
 $filter_date = isset($_GET['date']) ? $conn->real_escape_string($_GET['date']) : date('Y-m-d');
+$filter_class = isset($_GET['kelas']) ? $conn->real_escape_string($_GET['kelas']) : '';
+
+$class_where = '';
+if (!empty($filter_class)) {
+    $class_where = "AND s.class_name = '$filter_class'";
+}
 
 $sql = "
     SELECT a.*, s.nis, s.name, s.class_name, s.gender 
     FROM attendance a 
     JOIN santri s ON a.santri_id = s.id 
-    WHERE a.scan_date = '$filter_date'
+    WHERE a.scan_date = '$filter_date' $class_where
     ORDER BY a.scan_time ASC
 ";
 $res = $conn->query($sql);
@@ -46,9 +52,13 @@ $res = $conn->query($sql);
     </div>
 
     <div class="print-header text-center">
-        <h4 class="fw-bold mb-1">LAPORAN KEHADIRAN MURID</h4>
+        <h4 class="fw-bold mb-1">LAPORAN KEHADIRAN</h4>
         <h5 class="mb-1"><?= htmlspecialchars($app_settings['app_name']) ?></h5>
-        <p class="mb-0">Tanggal: <strong><?= date('d F Y', strtotime($filter_date)) ?></strong></p>
+        <p class="mb-0">Tanggal: <strong><?= date('d F Y', strtotime($filter_date)) ?></strong>
+        <?php if(!empty($filter_class)): ?>
+            &mdash; Kelas: <strong><?= htmlspecialchars($filter_class) ?></strong>
+        <?php endif; ?>
+        </p>
     </div>
 
     <table class="table table-bordered align-middle">

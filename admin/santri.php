@@ -132,25 +132,54 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['csv_file'])) {
     exit;
 }
 
-// Get Data
-$res = $conn->query("SELECT * FROM santri ORDER BY id DESC");
+// Get available classes for filter
+$class_res = $conn->query("SELECT DISTINCT class_name FROM santri ORDER BY class_name ASC");
+$filter_class = isset($_GET['kelas']) ? $conn->real_escape_string($_GET['kelas']) : '';
+
+// Get Data with optional class filter
+$where = '';
+if (!empty($filter_class)) {
+    $where = "WHERE class_name = '$filter_class'";
+}
+$res = $conn->query("SELECT * FROM santri $where ORDER BY class_name ASC, name ASC");
 ?>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <h4 class="fw-bold mb-0">DATA ABSENSI</h4>
-    <div>
-        <button class="btn btn-outline-dark btn-sm rounded-pill mx-1" data-bs-toggle="modal" data-bs-target="#modalImport">
+    <div class="d-flex flex-wrap gap-1 align-items-center">
+        <button class="btn btn-outline-dark btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#modalImport">
             <i class="fas fa-file-import"></i> Impor CSV
         </button>
-        <a href="santri_export.php" class="btn btn-outline-success btn-sm rounded-pill mx-1">
+        <a href="santri_export.php<?= !empty($filter_class) ? '?kelas='.urlencode($filter_class) : '' ?>" class="btn btn-outline-success btn-sm rounded-pill">
             <i class="fas fa-file-excel"></i> Ekspor CSV
         </a>
-        <a href="santri_print.php" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill mx-1">
-            <i class="fas fa-print"></i> Cetak Semua ID
+        <a href="santri_print.php<?= !empty($filter_class) ? '?kelas='.urlencode($filter_class) : '' ?>" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill">
+            <i class="fas fa-print"></i> Cetak ID <?= !empty($filter_class) ? htmlspecialchars($filter_class) : 'Semua' ?>
         </a>
         <button class="btn btn-primary bg-primary-custom btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#modalAdd">
             <i class="fas fa-plus"></i> Tambah Data Baru
         </button>
+    </div>
+</div>
+
+<!-- Filter Kelas -->
+<div class="card shadow-sm border-0 mb-3">
+    <div class="card-body py-2 px-3">
+        <form method="GET" class="d-flex align-items-center gap-2 flex-wrap">
+            <label class="form-label mb-0 fw-bold small text-muted"><i class="fas fa-filter me-1"></i> Filter Kelas:</label>
+            <select name="kelas" class="form-select form-select-sm" style="max-width: 200px;" onchange="this.form.submit()">
+                <option value="">-- Semua Kelas --</option>
+                <?php while($c = $class_res->fetch_assoc()): ?>
+                    <option value="<?= htmlspecialchars($c['class_name']) ?>" <?= $filter_class == $c['class_name'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($c['class_name']) ?>
+                    </option>
+                <?php endwhile; ?>
+            </select>
+            <?php if(!empty($filter_class)): ?>
+                <a href="santri.php" class="btn btn-outline-secondary btn-sm rounded-pill px-3"><i class="fas fa-times me-1"></i> Reset</a>
+            <?php endif; ?>
+            <span class="text-muted small ms-auto"><?= $res->num_rows ?> data ditemukan</span>
+        </form>
     </div>
 </div>
 
