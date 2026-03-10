@@ -27,7 +27,7 @@
 <div class="container flex-grow-1 d-flex flex-column justify-content-center align-items-center py-4">
     <div class="text-center mb-4 mt-2">
         <h2 class="fw-bold mb-2 text-white" style="letter-spacing: -0.5px;"><?= htmlspecialchars($app_settings['app_name']) ?></h2>
-        <p class="text-white-50" style="font-size: 1.1rem;">Arahkan QR Code Kartu Murid ke kamera</p>
+        <p class="text-white-50" style="font-size: 1.1rem;">Arahkan QR Code Kartu ke kamera</p>
     </div>
 
     <div class="scan-container m-0 w-100 p-2" style="max-width: 480px;">
@@ -134,7 +134,7 @@ function showResult(status, message, resultData = null) {
         if(resultData.photo) {
             photoHtml = `
             <div class="text-center mb-2 mt-4">
-                <img src="assets/images/${resultData.photo}" alt="Foto Murid" width="90" height="90" class="rounded-circle object-fit-cover border shadow-sm" style="border-width: 3px !important; border-color: rgba(255,255,255,0.5) !important;">
+                <img src="assets/images/${resultData.photo}" alt="Foto" width="90" height="90" class="rounded-circle object-fit-cover border shadow-sm" style="border-width: 3px !important; border-color: rgba(255,255,255,0.5) !important;">
             </div>`;
         }
         

@@ -14,8 +14,12 @@ $check_cols = $conn->query("SHOW COLUMNS FROM settings LIKE 'wa_card_message'");
 if ($check_cols->num_rows == 0) {
     $conn->query("ALTER TABLE settings ADD COLUMN wa_card_message TEXT");
 }
+$check_cols = $conn->query("SHOW COLUMNS FROM settings LIKE 'logo'");
+if ($check_cols->num_rows == 0) {
+    $conn->query("ALTER TABLE settings ADD COLUMN logo VARCHAR(255)");
+}
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
     $app_name = $conn->real_escape_string($_POST['app_name']);
     $institution_type = $conn->real_escape_string($_POST['institution_type']);
     $mpwa_url = $conn->real_escape_string($_POST['mpwa_url']);
@@ -34,12 +38,30 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $mpwa_sender = '62' . substr($mpwa_sender, 1);
     }
 
+    // Logo Upload Logic
+    $logo_query_update = '';
+    if (isset($_FILES['logo']) && $_FILES['logo']['error'] == 0) {
+        $ext = pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION);
+        $allowed = ['jpg', 'jpeg', 'png'];
+        if (in_array(strtolower($ext), $allowed)) {
+            $logo_name = "logo_" . time() . "." . $ext;
+            if (move_uploaded_file($_FILES['logo']['tmp_name'], "../assets/images/" . $logo_name)) {
+                $logo_query_update = ", logo='$logo_name'";
+                // Hapus logo lama jika ada
+                if(!empty($app_settings['logo']) && file_exists("../assets/images/" . $app_settings['logo'])) {
+                    unlink("../assets/images/" . $app_settings['logo']);
+                }
+            }
+        }
+    }
+
     // Check if exists
     $cek = $conn->query("SELECT id FROM settings LIMIT 1");
     if ($cek->num_rows > 0) {
-        $conn->query("UPDATE settings SET app_name='$app_name', institution_type='$institution_type', mpwa_url='$mpwa_url', mpwa_token='$mpwa_token', mpwa_sender='$mpwa_sender', admin_phone='$admin_phone', scanner_announcement='$scanner_announcement', card_title='$card_title', card_footer='$card_footer', wa_card_message='$wa_card_message'");
+        $conn->query("UPDATE settings SET app_name='$app_name', institution_type='$institution_type', mpwa_url='$mpwa_url', mpwa_token='$mpwa_token', mpwa_sender='$mpwa_sender', admin_phone='$admin_phone', scanner_announcement='$scanner_announcement', card_title='$card_title', card_footer='$card_footer', wa_card_message='$wa_card_message' $logo_query_update");
     } else {
-        $conn->query("INSERT INTO settings (app_name, institution_type, mpwa_url, mpwa_token, mpwa_sender, admin_phone, scanner_announcement, card_title, card_footer, wa_card_message) VALUES ('$app_name', '$institution_type', '$mpwa_url', '$mpwa_token', '$mpwa_sender', '$admin_phone', '$scanner_announcement', '$card_title', '$card_footer', '$wa_card_message')");
+        $logo_val = isset($logo_name) ? $logo_name : '';
+        $conn->query("INSERT INTO settings (app_name, institution_type, mpwa_url, mpwa_token, mpwa_sender, admin_phone, scanner_announcement, card_title, card_footer, wa_card_message, logo) VALUES ('$app_name', '$institution_type', '$mpwa_url', '$mpwa_token', '$mpwa_sender', '$admin_phone', '$scanner_announcement', '$card_title', '$card_footer', '$wa_card_message', '$logo_val')");
     }
     
     // Refresh admin credentials optionally (Not strictly required here, but logic is added later if needed)
@@ -56,19 +78,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 // Handle Test WA
 $test_msg = "";
-if (isset($_POST['test_wa'])) {
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['test_wa'])) {
     require_once '../includes/mpwa_helper.php';
     $test_phone = $conn->real_escape_string($_POST['admin_phone']);
     if (empty($test_phone)) {
         $test_msg = "<div class='alert alert-warning'>Silakan isi nomor WhatsApp Admin terlebih dahulu untuk testing.</div>";
     } else {
-        $msg = "Tes koneksi WhatsApp dari {$app_settings['app_name']}. Jika Anda menerima ini, konfigurasi sudah benar! ✅";
+        $msg = "Tes koneksi WhatsApp dari {$_POST['app_name']}. Jika Anda menerima ini, konfigurasi sudah benar! ✅";
         $res = send_wa_notification($_POST['mpwa_url'], $_POST['mpwa_token'], $_POST['mpwa_sender'], $test_phone, $msg);
         
         if ($res) {
-            $test_msg = "<div class='alert alert-success'>Pesan test berhasil dikirim ke $test_phone! Silakan cek HP Anda.</div>";
+            $test_msg = "<div class='alert alert-success mt-2'>Pesan test berhasil dikirim ke $test_phone! Silakan cek HP Anda.</div>";
         } else {
-            $test_msg = "<div class='alert alert-danger'>Gagal mengirim pesan. Silakan cek link wa_debug.log di root folder untuk detail error.</div>";
+            $test_msg = "<div class='alert alert-danger mt-2'>Gagal mengirim pesan. Silakan cek link wa_debug.log di root folder untuk detail error.</div>";
         }
     }
 }
@@ -89,7 +111,7 @@ if (isset($_POST['test_wa'])) {
     <div class="col-md-8 mx-auto">
         <div class="card shadow-sm border-0">
             <div class="card-body p-4">
-                <form method="POST">
+                <form method="POST" action="settings.php" enctype="multipart/form-data">
                     <h6 class="fw-bold text-primary mb-3"><i class="fas fa-laptop me-2"></i>Aplikasi & Instansi</h6>
                     
                     <div class="mb-4">
@@ -105,6 +127,17 @@ if (isset($_POST['test_wa'])) {
                     <div class="mb-4">
                         <label class="form-label">Pengumuman Halaman Scan (<small>Muncul di bawah scanner untuk dilihat wali/murid</small>)</label>
                         <textarea name="scanner_announcement" class="form-control" rows="3" placeholder="Masukkan pengumuman di sini..."><?= htmlspecialchars($app_settings['scanner_announcement'] ?? '') ?></textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label d-block">Logo Instansi (<small>Akan muncul di kartu cetak & digital</small>)</label>
+                        <?php if(!empty($app_settings['logo'])): ?>
+                            <div class="mb-2">
+                                <img src="../assets/images/<?= $app_settings['logo'] ?>" alt="Logo" style="max-height: 80px;" class="img-thumbnail">
+                            </div>
+                        <?php endif; ?>
+                        <input type="file" name="logo" class="form-control" accept="image/*">
+                        <div class="form-text small text-muted">Format: JPG/PNG. Disarankan logo dengan background transparan.</div>
                     </div>
 
                     <h6 class="fw-bold text-info mb-3 border-top pt-4"><i class="fas fa-id-card me-2"></i>Kustomisasi Kartu Murid</h6>
@@ -162,7 +195,7 @@ if (isset($_POST['test_wa'])) {
                     </div>
 
                     <hr>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 float-end">
+                    <button type="submit" name="save_settings" class="btn btn-primary rounded-pill px-4 float-end">
                         <i class="fas fa-save me-1"></i> Simpan Pengaturan
                     </button>
                 </form>

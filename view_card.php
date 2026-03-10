@@ -42,8 +42,15 @@ $row = $res->fetch_assoc();
 <div class="text-center">
     <div class="id-card">
         <div class="id-card-header">
-            <span class="inst-name"><?= htmlspecialchars($app_settings['app_name']) ?></span>
-            <span class="card-label"><?= htmlspecialchars($app_settings['card_title'] ?? 'KARTU IDENTITAS MURID') ?></span>
+            <div class="d-flex align-items-center justify-content-center">
+                <?php if(!empty($app_settings['logo'])): ?>
+                    <img src="assets/images/<?= htmlspecialchars($app_settings['logo']) ?>" alt="Logo" class="id-card-logo me-2">
+                <?php endif; ?>
+                <div class="text-center">
+                    <span class="inst-name d-block"><?= htmlspecialchars($app_settings['app_name']) ?></span>
+                    <span class="card-label small"><?= htmlspecialchars($app_settings['card_title'] ?? 'KARTU IDENTITAS MURID') ?></span>
+                </div>
+            </div>
         </div>
         <div class="id-card-body">
             <div class="id-phone-photo-wrap">

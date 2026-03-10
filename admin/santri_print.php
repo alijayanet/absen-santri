@@ -20,7 +20,7 @@ $res = $conn->query("SELECT * FROM santri $id_filter ORDER BY name ASC");
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cetak ID Card Murid - <?= $app_settings['app_name'] ?></title>
+    <title>Cetak ID Card - <?= $app_settings['app_name'] ?></title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/style.css">
@@ -40,8 +40,15 @@ $res = $conn->query("SELECT * FROM santri $id_filter ORDER BY name ASC");
         <?php while($row = $res->fetch_assoc()): ?>
             <div class="id-card">
                 <div class="id-card-header">
-                    <span class="inst-name"><?= htmlspecialchars($app_settings['app_name']) ?></span>
-                    <span class="card-label"><?= htmlspecialchars($app_settings['card_title'] ?? 'KARTU IDENTITAS MURID') ?></span>
+                    <div class="d-flex align-items-center justify-content-center">
+                        <?php if(!empty($app_settings['logo'])): ?>
+                            <img src="../assets/images/<?= htmlspecialchars($app_settings['logo']) ?>" alt="Logo" class="id-card-logo me-2">
+                        <?php endif; ?>
+                        <div class="text-center">
+                            <span class="inst-name d-block"><?= htmlspecialchars($app_settings['app_name']) ?></span>
+                            <span class="card-label small"><?= htmlspecialchars($app_settings['card_title'] ?? 'KARTU IDENTITAS MURID') ?></span>
+                        </div>
+                    </div>
                 </div>
                 <div class="id-card-body">
                     <div class="id-phone-photo-wrap">

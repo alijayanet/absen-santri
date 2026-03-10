@@ -12,14 +12,14 @@ require_once '../includes/header.php';
 <div class="sidebar">
     <div class="logo-area">
         <h5 class="fw-bold mb-0 text-white"><i class="fas fa-university me-2"></i>Admin Panel</h5>
-        <small class="text-muted"><?= htmlspecialchars($app_settings['app_name']) ?></small>
+        <small><?= htmlspecialchars($app_settings['app_name']) ?></small>
     </div>
     
     <a href="index.php" class="<?= basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : '' ?>">
         <i class="fas fa-tachometer-alt"></i> Dashboard
     </a>
     <a href="santri.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'santri.php' || basename($_SERVER['PHP_SELF']) == 'santri_print.php') ? 'active' : '' ?>">
-        <i class="fas fa-users"></i> Data Murid
+        <i class="fas fa-users"></i> Data Absensi
     </a>
     <a href="attendance.php" class="<?= basename($_SERVER['PHP_SELF']) == 'attendance.php' ? 'active' : '' ?>">
         <i class="fas fa-calendar-check"></i> Kehadiran Harian
@@ -57,7 +57,7 @@ require_once '../includes/header.php';
     </a>
     <a href="santri.php" class="nav-item <?= (basename($_SERVER['PHP_SELF']) == 'santri.php' || basename($_SERVER['PHP_SELF']) == 'santri_print.php') ? 'active' : '' ?>">
         <i class="fas fa-users"></i>
-        <span>Murid</span>
+        <span>Absensi</span>
     </a>
     <a href="attendance.php" class="nav-item <?= basename($_SERVER['PHP_SELF']) == 'attendance.php' ? 'active' : '' ?>">
         <i class="fas fa-calendar-day"></i>

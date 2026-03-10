@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['manual_attendance'])) 
             <div class="col-md-6 text-md-end mt-3 mt-md-0">
                 <div class="border rounded px-3 py-2 d-inline-block bg-light">
                     <span class="text-muted small">Total Hadir:</span>
-                    <span class="fw-bold ms-2 text-success fs-5"><?= $hadir ?> Murid</span>
+                    <span class="fw-bold ms-2 text-success fs-5"><?= $hadir ?> Orang</span>
                 </div>
             </div>
         </form>
@@ -81,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['manual_attendance'])) 
                     <tr>
                         <th class="ps-4">No</th>
                         <th>NIS</th>
-                        <th>Nama Murid</th>
+                        <th>Nama</th>
                         <th>Kelas</th>
                         <th>L/P</th>
                         <th>Jam Scan</th>
@@ -153,9 +153,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['manual_attendance'])) 
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Pilih Murid</label>
+                        <label class="form-label">Pilih Peserta/Nama</label>
                         <select name="santri_id" class="form-select" required>
-                            <option value="">-- Pilih Murid --</option>
+                            <option value="">-- Pilih --</option>
                             <?php 
                             $santris = $conn->query("SELECT id, name, nis FROM santri ORDER BY name ASC");
                             while($s = $santris->fetch_assoc()):

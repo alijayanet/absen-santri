@@ -137,7 +137,7 @@ $res = $conn->query("SELECT * FROM santri ORDER BY id DESC");
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="fw-bold mb-0">Data Murid</h4>
+    <h4 class="fw-bold mb-0">DATA ABSENSI</h4>
     <div>
         <button class="btn btn-outline-dark btn-sm rounded-pill mx-1" data-bs-toggle="modal" data-bs-target="#modalImport">
             <i class="fas fa-file-import"></i> Impor CSV
@@ -149,7 +149,7 @@ $res = $conn->query("SELECT * FROM santri ORDER BY id DESC");
             <i class="fas fa-print"></i> Cetak Semua ID
         </a>
         <button class="btn btn-primary bg-primary-custom btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#modalAdd">
-            <i class="fas fa-plus"></i> Tambah Murid
+            <i class="fas fa-plus"></i> Tambah Data Baru
         </button>
     </div>
 </div>
@@ -157,10 +157,10 @@ $res = $conn->query("SELECT * FROM santri ORDER BY id DESC");
 <?php if(isset($_GET['msg'])): ?>
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         <?php 
-        if($_GET['msg'] == 'added') echo "Data murid berhasil ditambahkan!";
-        elseif($_GET['msg'] == 'updated') echo "Data murid berhasil diperbarui!";
-        elseif($_GET['msg'] == 'deleted') echo "Data murid berhasil dihapus!";
-        elseif($_GET['msg'] == 'imported') echo "Data murid berhasil diimpor dari CSV!";
+        if($_GET['msg'] == 'added') echo "Data berhasil ditambahkan!";
+        elseif($_GET['msg'] == 'updated') echo "Data berhasil diperbarui!";
+        elseif($_GET['msg'] == 'deleted') echo "Data berhasil dihapus!";
+        elseif($_GET['msg'] == 'imported') echo "Data berhasil diimpor dari CSV!";
         elseif($_GET['msg'] == 'sent') echo "Kartu digital " . htmlspecialchars($_GET['to'] ?? '') . " berhasil dikirim ke nomor wali!";
         else echo "Tugas berhasil disimpan!";
         ?>

@@ -32,7 +32,7 @@ $santri_res = $conn->query("SELECT id, name, nis, class_name FROM santri ORDER B
                 <thead class="table-light">
                     <tr>
                         <th class="ps-4">No</th>
-                        <th>Nama Murid</th>
+                        <th>Nama</th>
                         <th>Kelas</th>
                         <th class="text-center text-success">Hadir</th>
                         <th class="text-center text-warning">Sakit</th>
@@ -74,7 +74,7 @@ $santri_res = $conn->query("SELECT id, name, nis, class_name FROM santri ORDER B
                         <?php endwhile; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="8" class="text-center py-4 text-muted">Belum ada data murid.</td>
+                            <td colspan="8" class="text-center py-4 text-muted">Belum ada data.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>

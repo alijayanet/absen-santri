@@ -39,7 +39,7 @@ for ($i = 6; $i >= 0; $i--) {
             <div class="card-body p-4 position-relative" style="z-index: 2;">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-white-50 text-uppercase fw-bold mb-2 small" style="letter-spacing: 1px;">Total Murid</h6>
+                        <h6 class="text-white-50 text-uppercase fw-bold mb-2 small" style="letter-spacing: 1px;">Total Database</h6>
                         <h2 class="mb-0 fw-bold display-5"><?= $total_santri ?></h2>
                     </div>
                     <div style="background: rgba(255,255,255,0.2); backdrop-filter: blur(8px); width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
@@ -85,7 +85,7 @@ for ($i = 6; $i >= 0; $i--) {
                     <i class="fas fa-qrcode fa-2x"></i>
                 </div>
                 <h5 class="fw-bold mb-2">Pindai QR Code</h5>
-                <p class="text-muted small mb-3">Gunakan kamera untuk mencatat kehadiran santri secara real-time.</p>
+                <p class="text-muted small mb-3">Gunakan kamera untuk mencatat kehadiran data secara real-time.</p>
                 <a href="../scan.php" target="_blank" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
                     <i class="fas fa-camera me-2"></i> Buka Scanner
                 </a>
@@ -121,7 +121,7 @@ for ($i = 6; $i >= 0; $i--) {
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th class="ps-4">Nama Murid</th>
+                        <th class="ps-4">Nama</th>
                         <th>NIS/Kelas</th>
                         <th>Waktu Scan</th>
                         <th>Status</th>
