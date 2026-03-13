@@ -41,11 +41,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_settings'])) {
     // Logo Upload Logic
     $logo_query_update = '';
     if (isset($_FILES['logo']) && $_FILES['logo']['error'] == 0) {
+        $tmp_path = $_FILES['logo']['tmp_name'];
         $ext = pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION);
         $allowed = ['jpg', 'jpeg', 'png'];
-        if (in_array(strtolower($ext), $allowed)) {
+        $ext = strtolower($ext);
+        if (in_array($ext, $allowed) && @getimagesize($tmp_path)) {
             $logo_name = "logo_" . time() . "." . $ext;
-            if (move_uploaded_file($_FILES['logo']['tmp_name'], "../assets/images/" . $logo_name)) {
+            if (move_uploaded_file($tmp_path, "../assets/images/" . $logo_name)) {
                 $logo_query_update = ", logo='$logo_name'";
                 // Hapus logo lama jika ada
                 if(!empty($app_settings['logo']) && file_exists("../assets/images/" . $app_settings['logo'])) {

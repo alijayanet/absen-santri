@@ -13,7 +13,7 @@ if (file_exists('includes/db.php')) {
     @mysqli_report(MYSQLI_REPORT_OFF);
     try {
         include 'includes/db.php';
-        if (isset($conn) && $conn instanceof mysqli && @$conn->ping()) {
+        if (isset($conn) && $conn instanceof mysqli && @$conn->query("SELECT 1")) {
             $already_installed = true;
         }
     } catch (Throwable $e) {
@@ -46,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['install'])) {
               `username` varchar(50) NOT NULL,
               `password` varchar(255) NOT NULL,
               `name` varchar(100) NOT NULL,
+              `phone` varchar(20) DEFAULT '',
               `role` varchar(20) DEFAULT 'admin',
               PRIMARY KEY (`id`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
@@ -58,11 +59,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['install'])) {
               `gender` enum('L','P') NOT NULL,
               `parent_phone` varchar(20) NOT NULL,
               `photo` varchar(255) DEFAULT '',
+              `teacher_id` int(11) DEFAULT NULL,
               `qrcode_hash` varchar(100) NOT NULL,
               `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
               PRIMARY KEY (`id`),
               UNIQUE KEY `nis` (`nis`),
-              UNIQUE KEY `qrcode_hash` (`qrcode_hash`)
+              UNIQUE KEY `qrcode_hash` (`qrcode_hash`),
+              KEY `idx_teacher_id` (`teacher_id`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
 
             "CREATE TABLE IF NOT EXISTS `attendance` (

@@ -1,20 +1,30 @@
 <?php
 require_once 'header.php';
 
+$current_user_id = (int)($_SESSION['admin_id'] ?? 0);
+
 $filter_date = isset($_GET['date']) ? $conn->real_escape_string($_GET['date']) : date('Y-m-d');
 $filter_class = isset($_GET['kelas']) ? $conn->real_escape_string($_GET['kelas']) : '';
-$class_list = $conn->query("SELECT DISTINCT class_name FROM santri ORDER BY class_name ASC");
+$class_where_for_list = '';
+if (!$is_admin) {
+    $class_where_for_list = "WHERE teacher_id = $current_user_id";
+}
+$class_list = $conn->query("SELECT DISTINCT class_name FROM santri $class_where_for_list ORDER BY class_name ASC");
 
 $class_where = '';
 if (!empty($filter_class)) {
     $class_where = "AND s.class_name = '$filter_class'";
+}
+$teacher_where = '';
+if (!$is_admin) {
+    $teacher_where = "AND s.teacher_id = $current_user_id";
 }
 
 $sql = "
     SELECT a.*, s.nis, s.name, s.class_name, s.gender 
     FROM attendance a 
     JOIN santri s ON a.santri_id = s.id 
-    WHERE a.scan_date = '$filter_date' $class_where
+    WHERE a.scan_date = '$filter_date' $class_where $teacher_where
     ORDER BY a.scan_time DESC
 ";
 $res = $conn->query($sql);
@@ -28,6 +38,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['manual_attendance'])) 
     $status = $conn->real_escape_string($_POST['status']);
     $scan_date = $conn->real_escape_string($_POST['scan_date']);
     $scan_time = date('H:i:s');
+
+    if (!$is_admin) {
+        $stmtOwn = $conn->prepare("SELECT id FROM santri WHERE id = ? AND teacher_id = ? LIMIT 1");
+        if ($stmtOwn) {
+            $stmtOwn->bind_param("ii", $santri_id, $current_user_id);
+            $stmtOwn->execute();
+            $stmtOwn->store_result();
+            $ok = $stmtOwn->num_rows > 0;
+            $stmtOwn->close();
+            if (!$ok) {
+                echo "<script>window.location='attendance.php?date=$scan_date&msg=unauthorized';</script>";
+                exit;
+            }
+        }
+    }
 
     // Cek jika sudah ada data di tanggal tersebut
     $cek = $conn->query("SELECT id FROM attendance WHERE santri_id = $santri_id AND scan_date = '$scan_date'");
@@ -55,7 +80,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['manual_attendance'])) 
 
 <?php if(isset($_GET['msg'])): ?>
     <div class="alert alert-success alert-dismissible fade show" role="alert">
-        Data absensi berhasil diperbarui!
+        <?php if($_GET['msg'] == 'unauthorized'): ?>
+            Akses ditolak.
+        <?php else: ?>
+            Data absensi berhasil diperbarui!
+        <?php endif; ?>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 <?php endif; ?>
@@ -175,7 +204,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['manual_attendance'])) 
                         <select name="santri_id" class="form-select" required>
                             <option value="">-- Pilih --</option>
                             <?php 
-                            $santris = $conn->query("SELECT id, name, nis FROM santri ORDER BY name ASC");
+                            $where_santri = $is_admin ? '' : "WHERE teacher_id = $current_user_id";
+                            $santris = $conn->query("SELECT id, name, nis FROM santri $where_santri ORDER BY name ASC");
                             while($s = $santris->fetch_assoc()):
                             ?>
                             <option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['name']) ?> (<?= $s['nis'] ?>)</option>

@@ -7,6 +7,10 @@ if (!isset($_SESSION['admin_logged_in'])) {
     exit;
 }
 
+$current_role = $_SESSION['admin_role'] ?? 'admin';
+$is_admin = $current_role === 'admin';
+$current_user_id = (int)($_SESSION['admin_id'] ?? 0);
+
 $filter_date = isset($_GET['date']) ? $conn->real_escape_string($_GET['date']) : date('Y-m-d');
 $filter_class = isset($_GET['kelas']) ? $conn->real_escape_string($_GET['kelas']) : '';
 
@@ -14,12 +18,16 @@ $class_where = '';
 if (!empty($filter_class)) {
     $class_where = "AND s.class_name = '$filter_class'";
 }
+$teacher_where = '';
+if (!$is_admin) {
+    $teacher_where = "AND s.teacher_id = $current_user_id";
+}
 
 $sql = "
     SELECT a.*, s.nis, s.name, s.class_name, s.gender 
     FROM attendance a 
     JOIN santri s ON a.santri_id = s.id 
-    WHERE a.scan_date = '$filter_date' $class_where
+    WHERE a.scan_date = '$filter_date' $class_where $teacher_where
     ORDER BY a.scan_time ASC
 ";
 $res = $conn->query($sql);
@@ -29,7 +37,7 @@ $res = $conn->query($sql);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cetak Laporan Kehadiran - <?= $app_settings['app_name'] ?></title>
+    <title>Cetak Laporan Kehadiran - <?= htmlspecialchars($app_settings['app_name'], ENT_QUOTES, 'UTF-8') ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">

@@ -5,14 +5,32 @@ if (!isset($_GET['hash'])) {
     die("Akses ditolak.");
 }
 
-$hash = $conn->real_escape_string($_GET['hash']);
-$res = $conn->query("SELECT * FROM santri WHERE qrcode_hash = '$hash'");
+$hash = trim((string)$_GET['hash']);
+if ($hash === '' || !preg_match('/^[a-f0-9]{32}$/i', $hash)) {
+    die("Akses ditolak.");
+}
 
-if ($res->num_rows == 0) {
+$stmt = $conn->prepare("SELECT name, nis, class_name, photo, qrcode_hash FROM santri WHERE qrcode_hash = ? LIMIT 1");
+if (!$stmt) {
+    die("Server error.");
+}
+$stmt->bind_param("s", $hash);
+$stmt->execute();
+$stmt->bind_result($name, $nis, $class_name, $photo, $qrcode_hash);
+$found = $stmt->fetch();
+$stmt->close();
+
+if (!$found) {
     die("Data tidak ditemukan.");
 }
 
-$row = $res->fetch_assoc();
+$row = [
+    'name' => $name,
+    'nis' => $nis,
+    'class_name' => $class_name,
+    'photo' => $photo,
+    'qrcode_hash' => $qrcode_hash
+];
 ?>
 <!DOCTYPE html>
 <html lang="id">

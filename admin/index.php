@@ -2,19 +2,24 @@
 require_once 'header.php';
 
 // Get total santri
-$res_santri = $conn->query("SELECT COUNT(*) as total FROM santri");
+$current_user_id = (int)($_SESSION['admin_id'] ?? 0);
+$santri_where = $is_admin ? '' : "WHERE teacher_id = $current_user_id";
+$res_santri = $conn->query("SELECT COUNT(*) as total FROM santri $santri_where");
 $total_santri = $res_santri->fetch_assoc()['total'];
 
 // Get attendance today
 $today = date('Y-m-d');
-$res_att = $conn->query("SELECT COUNT(*) as total FROM attendance WHERE scan_date = '$today'");
+$att_where = $is_admin ? "WHERE a.scan_date = '$today'" : "WHERE a.scan_date = '$today' AND s.teacher_id = $current_user_id";
+$res_att = $conn->query("SELECT COUNT(*) as total FROM attendance a JOIN santri s ON a.santri_id = s.id $att_where");
 $total_att_today = $res_att->fetch_assoc()['total'];
 
 // Get recent attendance list
+$recent_where = $is_admin ? "" : "WHERE s.teacher_id = $current_user_id";
 $res_recent = $conn->query("
     SELECT a.*, s.name, s.nis, s.class_name 
     FROM attendance a 
     JOIN santri s ON a.santri_id = s.id 
+    $recent_where
     ORDER BY a.id DESC LIMIT 5
 ");
 
@@ -26,7 +31,8 @@ for ($i = 6; $i >= 0; $i--) {
     $label = date('d M', strtotime($d));
     $chart_labels[] = $label;
     
-    $res_count = $conn->query("SELECT COUNT(*) as total FROM attendance WHERE scan_date = '$d'");
+    $chart_where = $is_admin ? "WHERE a.scan_date = '$d'" : "WHERE a.scan_date = '$d' AND s.teacher_id = $current_user_id";
+    $res_count = $conn->query("SELECT COUNT(*) as total FROM attendance a JOIN santri s ON a.santri_id = s.id $chart_where");
     $chart_data[] = $res_count->fetch_assoc()['total'];
 }
 ?>
@@ -50,7 +56,7 @@ for ($i = 6; $i >= 0; $i--) {
             <i class="fas fa-users position-absolute" style="bottom: -20px; right: -10px; font-size: 8rem; opacity: 0.1; z-index: 1;"></i>
             <div class="card-footer bg-black bg-opacity-10 border-0 py-3 position-relative" style="z-index: 2;">
                 <a href="santri.php" class="text-white text-decoration-none d-flex justify-content-between align-items-center small fw-bold">
-                    <span>Kelola Database</span> <i class="fas fa-chevron-right fa-xs"></i>
+                    <span><?= $is_admin ? 'Kelola Database' : 'Kelola Santri' ?></span> <i class="fas fa-chevron-right fa-xs"></i>
                 </a>
             </div>
         </div>

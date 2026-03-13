@@ -1,13 +1,29 @@
 <?php
 require_once 'header.php';
 
+$current_user_id = (int)($_SESSION['admin_id'] ?? 0);
+
 $filter_month = isset($_GET['month']) ? $_GET['month'] : date('Y-m');
 $filter_class = isset($_GET['kelas']) ? $conn->real_escape_string($_GET['kelas']) : '';
-$class_list = $conn->query("SELECT DISTINCT class_name FROM santri ORDER BY class_name ASC");
+$class_where_for_list = '';
+if (!$is_admin) {
+    $class_where_for_list = "WHERE teacher_id = $current_user_id";
+}
+$class_list = $conn->query("SELECT DISTINCT class_name FROM santri $class_where_for_list ORDER BY class_name ASC");
 
 // Get all santri (filtered by class if set)
-$class_where = !empty($filter_class) ? "WHERE class_name = '$filter_class'" : '';
-$santri_res = $conn->query("SELECT id, name, nis, class_name FROM santri $class_where ORDER BY class_name ASC, name ASC");
+$where_parts = [];
+if (!empty($filter_class)) {
+    $where_parts[] = "class_name = '$filter_class'";
+}
+if (!$is_admin) {
+    $where_parts[] = "teacher_id = $current_user_id";
+}
+$where = '';
+if (!empty($where_parts)) {
+    $where = "WHERE " . implode(' AND ', $where_parts);
+}
+$santri_res = $conn->query("SELECT id, name, nis, class_name FROM santri $where ORDER BY class_name ASC, name ASC");
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">

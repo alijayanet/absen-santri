@@ -1,8 +1,8 @@
     </div> <!-- End p-4 -->
 </div> <!-- End main-content -->
-<?php require_once '../includes/footer.php'; ?>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../assets/js/script.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="../assets/js/script.js"></script>
     
     <?php if(basename($_SERVER['PHP_SELF']) == 'index.php' && isset($chart_labels)): ?>
     <script>
@@ -70,3 +70,4 @@
     </script>
     <?php endif; ?>
 </body>
+</html>

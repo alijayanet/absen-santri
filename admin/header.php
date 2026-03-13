@@ -6,30 +6,46 @@ if (!isset($_SESSION['admin_logged_in'])) {
     header("Location: ../login.php");
     exit;
 }
+
+$current_role = $_SESSION['admin_role'] ?? 'admin';
+$is_admin = $current_role === 'admin';
+$current_page = basename($_SERVER['PHP_SELF']);
+$restricted_pages = ['settings.php', 'users.php'];
+if (!$is_admin && in_array($current_page, $restricted_pages, true)) {
+    header("Location: index.php");
+    exit;
+}
 require_once '../includes/header.php';
 ?>
 <!-- Sidebar -->
 <div class="sidebar">
     <div class="logo-area">
         <h5 class="fw-bold mb-0 text-white"><i class="fas fa-university me-2"></i>Admin Panel</h5>
-        <small><?= htmlspecialchars($app_settings['app_name']) ?></small>
+        <small><?= htmlspecialchars($app_settings['app_name']) ?><?= $is_admin ? '' : ' (Guru)' ?></small>
     </div>
     
     <a href="index.php" class="<?= basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : '' ?>">
         <i class="fas fa-tachometer-alt"></i> Dashboard
     </a>
     <a href="santri.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'santri.php' || basename($_SERVER['PHP_SELF']) == 'santri_print.php') ? 'active' : '' ?>">
-        <i class="fas fa-users"></i> Data Absensi
+        <i class="fas fa-users"></i> Data Santri
     </a>
+    <?php if ($is_admin): ?>
+        <a href="users.php" class="<?= basename($_SERVER['PHP_SELF']) == 'users.php' ? 'active' : '' ?>">
+            <i class="fas fa-user-shield"></i> Akun Guru
+        </a>
+    <?php endif; ?>
     <a href="attendance.php" class="<?= basename($_SERVER['PHP_SELF']) == 'attendance.php' ? 'active' : '' ?>">
         <i class="fas fa-calendar-check"></i> Kehadiran Harian
     </a>
     <a href="recap.php" class="<?= basename($_SERVER['PHP_SELF']) == 'recap.php' ? 'active' : '' ?>">
         <i class="fas fa-file-invoice"></i> Rekap Bulanan
     </a>
-    <a href="settings.php" class="<?= basename($_SERVER['PHP_SELF']) == 'settings.php' ? 'active' : '' ?>">
-        <i class="fas fa-cog"></i> Pengaturan
-    </a>
+    <?php if ($is_admin): ?>
+        <a href="settings.php" class="<?= basename($_SERVER['PHP_SELF']) == 'settings.php' ? 'active' : '' ?>">
+            <i class="fas fa-cog"></i> Pengaturan
+        </a>
+    <?php endif; ?>
     <hr class="border-secondary mx-3">
     <a href="../scan.php" target="_blank">
         <i class="fas fa-qrcode"></i> Buka Scanner
@@ -43,7 +59,7 @@ require_once '../includes/header.php';
 <div class="main-content">
     <!-- Topbar -->
     <div class="top-navbar d-flex justify-content-between align-items-center">
-        <h5 class="mb-0 fw-bold d-none d-md-block">Hi, <?= htmlspecialchars($_SESSION['admin_name']) ?></h5>
+        <h5 class="mb-0 fw-bold d-none d-md-block">Hi, <?= htmlspecialchars($_SESSION['admin_name']) ?><?= $is_admin ? '' : ' (Guru)' ?></h5>
         <h5 class="mb-0 fw-bold d-block d-md-none"><i class="fas fa-bars"></i></h5>
         <span class="text-muted"><i class="far fa-calendar-alt me-1"></i> <?= date('d M Y') ?></span>
     </div>
@@ -57,7 +73,7 @@ require_once '../includes/header.php';
     </a>
     <a href="santri.php" class="nav-item <?= (basename($_SERVER['PHP_SELF']) == 'santri.php' || basename($_SERVER['PHP_SELF']) == 'santri_print.php') ? 'active' : '' ?>">
         <i class="fas fa-users"></i>
-        <span>Absensi</span>
+        <span>Santri</span>
     </a>
     <a href="attendance.php" class="nav-item <?= basename($_SERVER['PHP_SELF']) == 'attendance.php' ? 'active' : '' ?>">
         <i class="fas fa-calendar-day"></i>
@@ -67,8 +83,15 @@ require_once '../includes/header.php';
         <i class="fas fa-file-invoice"></i>
         <span>Rekap</span>
     </a>
-    <a href="settings.php" class="nav-item <?= basename($_SERVER['PHP_SELF']) == 'settings.php' ? 'active' : '' ?>">
-        <i class="fas fa-cog"></i>
-        <span>Menu</span>
-    </a>
+    <?php if ($is_admin): ?>
+        <a href="settings.php" class="nav-item <?= basename($_SERVER['PHP_SELF']) == 'settings.php' ? 'active' : '' ?>">
+            <i class="fas fa-cog"></i>
+            <span>Menu</span>
+        </a>
+    <?php else: ?>
+        <a href="../scan.php" class="nav-item" target="_blank">
+            <i class="fas fa-qrcode"></i>
+            <span>Scan</span>
+        </a>
+    <?php endif; ?>
 </div>

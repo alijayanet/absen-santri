@@ -1,19 +1,45 @@
 <?php
 require_once 'header.php';
 
+$current_role = $_SESSION['admin_role'] ?? 'admin';
+$is_admin = $current_role === 'admin';
+$current_user_id = (int)($_SESSION['admin_id'] ?? 0);
+
+$guru_res = $conn->query("SELECT id, name, phone, role FROM users WHERE role IN ('guru','admin') ORDER BY (role = 'admin') ASC, name ASC");
+$guru_options = [];
+if ($guru_res && $guru_res->num_rows > 0) {
+    while ($g = $guru_res->fetch_assoc()) {
+        $guru_options[] = $g;
+    }
+}
+
 // Handle Delete Delete
 if (isset($_GET['delete'])) {
     $id = (int)$_GET['delete'];
-    
-    // Ambil foto lama untuk dihapus filenya
-    $q_del = $conn->query("SELECT photo FROM santri WHERE id = $id");
-    if($r_del = $q_del->fetch_assoc()) {
-        if(!empty($r_del['photo']) && file_exists("../assets/images/" . $r_del['photo'])) {
-            unlink("../assets/images/" . $r_del['photo']);
+
+    $stmtSantri = $conn->prepare("SELECT photo, teacher_id FROM santri WHERE id = ? LIMIT 1");
+    if ($stmtSantri) {
+        $stmtSantri->bind_param("i", $id);
+        $stmtSantri->execute();
+        $stmtSantri->bind_result($photo_to_delete, $teacher_id_of_row);
+        $found = $stmtSantri->fetch();
+        $stmtSantri->close();
+        if ($found) {
+            if (!$is_admin && (int)$teacher_id_of_row !== $current_user_id) {
+                echo "<script>window.location='santri.php?msg=unauthorized';</script>";
+                exit;
+            }
+            if (!empty($photo_to_delete) && file_exists("../assets/images/" . $photo_to_delete)) {
+                unlink("../assets/images/" . $photo_to_delete);
+            }
+            $stmtDel = $conn->prepare("DELETE FROM santri WHERE id = ?");
+            if ($stmtDel) {
+                $stmtDel->bind_param("i", $id);
+                $stmtDel->execute();
+                $stmtDel->close();
+            }
         }
     }
-
-    $conn->query("DELETE FROM santri WHERE id = $id");
     echo "<script>window.location='santri.php?msg=deleted';</script>";
     exit;
 }
@@ -22,12 +48,23 @@ if (isset($_GET['delete'])) {
 if (isset($_GET['send_card'])) {
     require_once '../includes/mpwa_helper.php';
     $id = (int)$_GET['send_card'];
-    
-    $q = $conn->query("SELECT * FROM santri WHERE id = $id");
-    if($s = $q->fetch_assoc()) {
-        $parent_phone = $s['parent_phone'];
-        $name = $s['name'];
-        $hash = $s['qrcode_hash'];
+
+    $stmtSantri = $conn->prepare("SELECT id, name, parent_phone, qrcode_hash, teacher_id FROM santri WHERE id = ? LIMIT 1");
+    if ($stmtSantri) {
+        $stmtSantri->bind_param("i", $id);
+        $stmtSantri->execute();
+        $stmtSantri->bind_result($santri_id, $name, $parent_phone, $hash, $teacher_id_of_row);
+        $found = $stmtSantri->fetch();
+        $stmtSantri->close();
+    } else {
+        $found = false;
+    }
+
+    if ($found) {
+        if (!$is_admin && (int)$teacher_id_of_row !== $current_user_id) {
+            echo "<script>window.location='santri.php?msg=unauthorized';</script>";
+            exit;
+        }
         
         // Build Link
         $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
@@ -51,51 +88,40 @@ if (isset($_GET['send_card'])) {
     exit;
 }
 
-// Handle Add/Edit
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $nis = $conn->real_escape_string($_POST['nis']);
-    $name = $conn->real_escape_string($_POST['name']);
-    $class_name = $conn->real_escape_string($_POST['class_name']);
-    $gender = $conn->real_escape_string($_POST['gender']);
-    $parent_phone = $conn->real_escape_string($_POST['parent_phone']);
-    $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
-
-    // Formatting parent phone to start with 62
-    if (strpos($parent_phone, '0') === 0) {
-        $parent_phone = '62' . substr($parent_phone, 1);
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['bulk_assign'])) {
+    if (!$is_admin) {
+        echo "<script>window.location='santri.php?msg=unauthorized';</script>";
+        exit;
     }
-    
-    // Image Upload Logic
-    $photo_name = '';
-    $photo_query_update = '';
-    if (isset($_FILES['photo']) && $_FILES['photo']['error'] == 0) {
-        $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
-        $allowed = ['jpg', 'jpeg', 'png'];
-        if (in_array(strtolower($ext), $allowed)) {
-            $photo_name = "santri_" . time() . "_" . rand(100,999) . "." . $ext;
-            move_uploaded_file($_FILES['photo']['tmp_name'], "../assets/images/" . $photo_name);
-            $photo_query_update = ", photo='$photo_name'";
+
+    $target_class = isset($_POST['target_class']) ? $conn->real_escape_string($_POST['target_class']) : '';
+    $target_teacher_id = isset($_POST['target_teacher_id']) && $_POST['target_teacher_id'] !== '' ? (int)$_POST['target_teacher_id'] : null;
+    $override = isset($_POST['override']) ? 1 : 0;
+
+    if ($target_class === '') {
+        echo "<script>window.location='santri.php?msg=invalid';</script>";
+        exit;
+    }
+
+    $where_extra = $override ? "" : " AND (teacher_id IS NULL OR teacher_id = 0)";
+
+    if ($target_teacher_id === null || $target_teacher_id <= 0) {
+        $stmtAssign = $conn->prepare("UPDATE santri SET teacher_id = NULL WHERE class_name = ? $where_extra");
+        if ($stmtAssign) {
+            $stmtAssign->bind_param("s", $target_class);
+            $stmtAssign->execute();
+            $stmtAssign->close();
         }
-    }
-
-    if ($id > 0) {
-        // Update
-        $conn->query("UPDATE santri SET nis='$nis', name='$name', class_name='$class_name', gender='$gender', parent_phone='$parent_phone' $photo_query_update WHERE id=$id");
-        echo "<script>window.location='santri.php?msg=updated';</script>";
     } else {
-        // Insert
-        // Generate unique MD5 Hash for QR string
-        $qrcode_hash = md5($nis . time() . rand(1000,9999));
-        
-        $sql = "INSERT INTO santri (nis, name, class_name, gender, parent_phone, qrcode_hash, photo) 
-                VALUES ('$nis', '$name', '$class_name', '$gender', '$parent_phone', '$qrcode_hash', '$photo_name')";
-        
-        if ($conn->query($sql)) {
-            echo "<script>window.location='santri.php?msg=added';</script>";
-        } else {
-            echo "<script>alert('Gagal tambah: " . $conn->error . "');</script>";
+        $stmtAssign = $conn->prepare("UPDATE santri SET teacher_id = ? WHERE class_name = ? $where_extra");
+        if ($stmtAssign) {
+            $stmtAssign->bind_param("is", $target_teacher_id, $target_class);
+            $stmtAssign->execute();
+            $stmtAssign->close();
         }
     }
+
+    echo "<script>window.location='santri.php?msg=assigned&kelas=" . urlencode($target_class) . "';</script>";
     exit;
 }
 
@@ -106,7 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['csv_file'])) {
     $rowCount = 0;
     while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
         $rowCount++;
-        if ($rowCount == 1) continue; // Skip header
+        if ($rowCount == 1) continue;
         if (count($data) < 5) continue; 
 
         $nis = $conn->real_escape_string($data[0]);
@@ -121,10 +147,31 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['csv_file'])) {
 
         $cek = $conn->query("SELECT id FROM santri WHERE nis = '$nis'");
         if ($cek->num_rows > 0) {
-            $conn->query("UPDATE santri SET name='$name', class_name='$class_name', gender='$gender', parent_phone='$parent_phone' WHERE nis='$nis'");
+            $existing = $cek->fetch_assoc();
+            $existing_id = (int)$existing['id'];
+            if (!$is_admin) {
+                $stmtOwn = $conn->prepare("SELECT teacher_id FROM santri WHERE id = ? LIMIT 1");
+                if ($stmtOwn) {
+                    $stmtOwn->bind_param("i", $existing_id);
+                    $stmtOwn->execute();
+                    $stmtOwn->bind_result($teacher_id_of_row);
+                    $found = $stmtOwn->fetch();
+                    $stmtOwn->close();
+                    if (!$found || (int)$teacher_id_of_row !== $current_user_id) {
+                        continue;
+                    }
+                }
+                $conn->query("UPDATE santri SET name='$name', class_name='$class_name', gender='$gender', parent_phone='$parent_phone' WHERE nis='$nis' AND teacher_id=$current_user_id");
+            } else {
+                $conn->query("UPDATE santri SET name='$name', class_name='$class_name', gender='$gender', parent_phone='$parent_phone' WHERE nis='$nis'");
+            }
         } else {
             $qrcode_hash = md5($nis . time() . rand(1000,9999));
-            $conn->query("INSERT INTO santri (nis, name, class_name, gender, parent_phone, qrcode_hash) VALUES ('$nis', '$name', '$class_name', '$gender', '$parent_phone', '$qrcode_hash')");
+            if ($is_admin) {
+                $conn->query("INSERT INTO santri (nis, name, class_name, gender, parent_phone, qrcode_hash, teacher_id) VALUES ('$nis', '$name', '$class_name', '$gender', '$parent_phone', '$qrcode_hash', NULL)");
+            } else {
+                $conn->query("INSERT INTO santri (nis, name, class_name, gender, parent_phone, qrcode_hash, teacher_id) VALUES ('$nis', '$name', '$class_name', '$gender', '$parent_phone', '$qrcode_hash', $current_user_id)");
+            }
         }
     }
     fclose($handle);
@@ -132,20 +179,124 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['csv_file'])) {
     exit;
 }
 
+// Handle Add/Edit
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $nis = $conn->real_escape_string($_POST['nis']);
+    $name = $conn->real_escape_string($_POST['name']);
+    $class_name = $conn->real_escape_string($_POST['class_name']);
+    $gender = $conn->real_escape_string($_POST['gender']);
+    $parent_phone = $conn->real_escape_string($_POST['parent_phone']);
+    $teacher_id = isset($_POST['teacher_id']) && $_POST['teacher_id'] !== '' ? (int)$_POST['teacher_id'] : null;
+    $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+
+    // Formatting parent phone to start with 62
+    if (strpos($parent_phone, '0') === 0) {
+        $parent_phone = '62' . substr($parent_phone, 1);
+    }
+    
+    // Image Upload Logic
+    $photo_name = '';
+    $photo_query_update = '';
+    if (isset($_FILES['photo']) && $_FILES['photo']['error'] == 0) {
+        $tmp_path = $_FILES['photo']['tmp_name'];
+        $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
+        $allowed = ['jpg', 'jpeg', 'png'];
+        $ext = strtolower($ext);
+        if (in_array($ext, $allowed) && @getimagesize($tmp_path)) {
+            $photo_name = "santri_" . time() . "_" . rand(100,999) . "." . $ext;
+            move_uploaded_file($tmp_path, "../assets/images/" . $photo_name);
+            $photo_query_update = ", photo='$photo_name'";
+        }
+    }
+
+    if ($id > 0) {
+        if (!$is_admin) {
+            $stmtOwn = $conn->prepare("SELECT teacher_id FROM santri WHERE id = ? LIMIT 1");
+            if ($stmtOwn) {
+                $stmtOwn->bind_param("i", $id);
+                $stmtOwn->execute();
+                $stmtOwn->bind_result($teacher_id_of_row);
+                $found = $stmtOwn->fetch();
+                $stmtOwn->close();
+                if (!$found || (int)$teacher_id_of_row !== $current_user_id) {
+                    echo "<script>window.location='santri.php?msg=unauthorized';</script>";
+                    exit;
+                }
+            }
+            $teacher_id = $current_user_id;
+        }
+        // Update
+        if ($is_admin) {
+            if ($teacher_id === null || $teacher_id <= 0) {
+                $conn->query("UPDATE santri SET nis='$nis', name='$name', class_name='$class_name', gender='$gender', parent_phone='$parent_phone', teacher_id=NULL $photo_query_update WHERE id=$id");
+            } else {
+                $conn->query("UPDATE santri SET nis='$nis', name='$name', class_name='$class_name', gender='$gender', parent_phone='$parent_phone', teacher_id=$teacher_id $photo_query_update WHERE id=$id");
+            }
+        } else {
+            $conn->query("UPDATE santri SET nis='$nis', name='$name', class_name='$class_name', gender='$gender', parent_phone='$parent_phone', teacher_id=$teacher_id $photo_query_update WHERE id=$id");
+        }
+        echo "<script>window.location='santri.php?msg=updated';</script>";
+    } else {
+        if (!$is_admin) {
+            $teacher_id = $current_user_id;
+        }
+        // Insert
+        // Generate unique MD5 Hash for QR string
+        $qrcode_hash = md5($nis . time() . rand(1000,9999));
+
+        if ($is_admin) {
+            if ($teacher_id === null || $teacher_id <= 0) {
+                $sql = "INSERT INTO santri (nis, name, class_name, gender, parent_phone, qrcode_hash, photo, teacher_id) 
+                        VALUES ('$nis', '$name', '$class_name', '$gender', '$parent_phone', '$qrcode_hash', '$photo_name', NULL)";
+            } else {
+                $sql = "INSERT INTO santri (nis, name, class_name, gender, parent_phone, qrcode_hash, photo, teacher_id) 
+                        VALUES ('$nis', '$name', '$class_name', '$gender', '$parent_phone', '$qrcode_hash', '$photo_name', $teacher_id)";
+            }
+        } else {
+            $sql = "INSERT INTO santri (nis, name, class_name, gender, parent_phone, qrcode_hash, photo, teacher_id) 
+                    VALUES ('$nis', '$name', '$class_name', '$gender', '$parent_phone', '$qrcode_hash', '$photo_name', $teacher_id)";
+        }
+        
+        if ($conn->query($sql)) {
+            echo "<script>window.location='santri.php?msg=added';</script>";
+        } else {
+            echo "<script>alert('Gagal tambah: " . $conn->error . "');</script>";
+        }
+    }
+    exit;
+}
+
 // Get available classes for filter
-$class_res = $conn->query("SELECT DISTINCT class_name FROM santri ORDER BY class_name ASC");
+$class_where = '';
+if (!$is_admin) {
+    $class_where = "WHERE teacher_id = $current_user_id";
+}
+$class_res = $conn->query("SELECT DISTINCT class_name FROM santri $class_where ORDER BY class_name ASC");
+$class_options = [];
+if ($class_res && $class_res->num_rows > 0) {
+    while ($c = $class_res->fetch_assoc()) {
+        $class_options[] = $c['class_name'];
+    }
+}
 $filter_class = isset($_GET['kelas']) ? $conn->real_escape_string($_GET['kelas']) : '';
 
 // Get Data with optional class filter
-$where = '';
+$where_parts = [];
 if (!empty($filter_class)) {
-    $where = "WHERE class_name = '$filter_class'";
+    $where_parts[] = "s.class_name = '$filter_class'";
 }
-$res = $conn->query("SELECT * FROM santri $where ORDER BY class_name ASC, name ASC");
+if (!$is_admin) {
+    $where_parts[] = "s.teacher_id = $current_user_id";
+}
+$where = '';
+if (!empty($where_parts)) {
+    $where = "WHERE " . implode(' AND ', $where_parts);
+}
+$res = $conn->query("SELECT s.*, u.name as teacher_name, u.phone as teacher_phone FROM santri s LEFT JOIN users u ON u.id = s.teacher_id $where ORDER BY s.class_name ASC, s.name ASC");
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-    <h4 class="fw-bold mb-0">DATA ABSENSI</h4>
+    <h4 class="fw-bold mb-0">DATA SANTRI</h4>
     <div class="d-flex flex-wrap gap-1 align-items-center">
         <button class="btn btn-outline-dark btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#modalImport">
             <i class="fas fa-file-import"></i> Impor CSV
@@ -156,6 +307,11 @@ $res = $conn->query("SELECT * FROM santri $where ORDER BY class_name ASC, name A
         <a href="santri_print.php<?= !empty($filter_class) ? '?kelas='.urlencode($filter_class) : '' ?>" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill">
             <i class="fas fa-print"></i> Cetak ID <?= !empty($filter_class) ? htmlspecialchars($filter_class) : 'Semua' ?>
         </a>
+        <?php if($is_admin): ?>
+            <button class="btn btn-outline-secondary btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#modalAssignGuru">
+                <i class="fas fa-user-check"></i> Assign Guru Kelas
+            </button>
+        <?php endif; ?>
         <button class="btn btn-primary bg-primary-custom btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#modalAdd">
             <i class="fas fa-plus"></i> Tambah Data Baru
         </button>
@@ -169,11 +325,11 @@ $res = $conn->query("SELECT * FROM santri $where ORDER BY class_name ASC, name A
             <label class="form-label mb-0 fw-bold small text-muted"><i class="fas fa-filter me-1"></i> Filter Kelas:</label>
             <select name="kelas" class="form-select form-select-sm" style="max-width: 200px;" onchange="this.form.submit()">
                 <option value="">-- Semua Kelas --</option>
-                <?php while($c = $class_res->fetch_assoc()): ?>
-                    <option value="<?= htmlspecialchars($c['class_name']) ?>" <?= $filter_class == $c['class_name'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($c['class_name']) ?>
+                <?php foreach($class_options as $class_name_opt): ?>
+                    <option value="<?= htmlspecialchars($class_name_opt) ?>" <?= $filter_class == $class_name_opt ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($class_name_opt) ?>
                     </option>
-                <?php endwhile; ?>
+                <?php endforeach; ?>
             </select>
             <?php if(!empty($filter_class)): ?>
                 <a href="santri.php" class="btn btn-outline-secondary btn-sm rounded-pill px-3"><i class="fas fa-times me-1"></i> Reset</a>
@@ -190,7 +346,10 @@ $res = $conn->query("SELECT * FROM santri $where ORDER BY class_name ASC, name A
         elseif($_GET['msg'] == 'updated') echo "Data berhasil diperbarui!";
         elseif($_GET['msg'] == 'deleted') echo "Data berhasil dihapus!";
         elseif($_GET['msg'] == 'imported') echo "Data berhasil diimpor dari CSV!";
+        elseif($_GET['msg'] == 'assigned') echo "Assign guru per kelas berhasil disimpan untuk kelas " . htmlspecialchars($_GET['kelas'] ?? '') . "!";
         elseif($_GET['msg'] == 'sent') echo "Kartu digital " . htmlspecialchars($_GET['to'] ?? '') . " berhasil dikirim ke nomor wali!";
+        elseif($_GET['msg'] == 'unauthorized') echo "Akses ditolak.";
+        elseif($_GET['msg'] == 'invalid') echo "Data tidak valid.";
         else echo "Tugas berhasil disimpan!";
         ?>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -207,6 +366,9 @@ $res = $conn->query("SELECT * FROM santri $where ORDER BY class_name ASC, name A
                         <th>NIS</th>
                         <th>Nama</th>
                         <th>Kelas</th>
+                        <?php if($is_admin): ?>
+                            <th>Guru</th>
+                        <?php endif; ?>
                         <th>L/P</th>
                         <th>No. WA Wali</th>
                         <th class="text-center">QR Code & Foto</th>
@@ -228,6 +390,20 @@ $res = $conn->query("SELECT * FROM santri $where ORDER BY class_name ASC, name A
                                     <?= htmlspecialchars($row['name']) ?>
                                 </td>
                                 <td><?= htmlspecialchars($row['class_name']) ?></td>
+                                <?php if($is_admin): ?>
+                                    <td>
+                                        <?php if(!empty($row['teacher_name'])): ?>
+                                            <div class="fw-medium"><?= htmlspecialchars($row['teacher_name']) ?></div>
+                                            <?php if(!empty($row['teacher_phone'])): ?>
+                                                <a href="https://wa.me/<?= htmlspecialchars($row['teacher_phone']) ?>" target="_blank" class="text-success text-decoration-none small">
+                                                    <i class="fab fa-whatsapp"></i> <?= htmlspecialchars($row['teacher_phone']) ?>
+                                                </a>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <span class="text-muted">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                <?php endif; ?>
                                 <td><?= $row['gender'] ?></td>
                                 <td>
                                     <a href="https://wa.me/<?= $row['parent_phone'] ?>" target="_blank" class="text-success text-decoration-none">
@@ -255,7 +431,7 @@ $res = $conn->query("SELECT * FROM santri $where ORDER BY class_name ASC, name A
                         <?php endwhile; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="8" class="text-center py-4 text-muted">Belum ada data murid. Silakan tambah data.</td>
+                            <td colspan="<?= $is_admin ? '9' : '8' ?>" class="text-center py-4 text-muted">Belum ada data murid. Silakan tambah data.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -308,6 +484,21 @@ if($res->num_rows > 0):
                     </div>
                     <div class="modal-body">
                         <input type="hidden" name="id" value="<?= $row['id'] ?>">
+                        <?php if($is_admin): ?>
+                            <div class="mb-3">
+                                <label class="form-label">Guru Penanggung Jawab</label>
+                                <select name="teacher_id" class="form-select">
+                                    <option value="">-- Tidak ditentukan --</option>
+                                    <?php foreach($guru_options as $g): ?>
+                                        <option value="<?= (int)$g['id'] ?>" <?= ((int)($row['teacher_id'] ?? 0) === (int)$g['id']) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($g['name']) ?><?= ($g['role'] ?? '') === 'admin' ? ' (Admin)' : '' ?><?= !empty($g['phone']) ? ' - ' . htmlspecialchars($g['phone']) : '' ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        <?php else: ?>
+                            <input type="hidden" name="teacher_id" value="<?= $current_user_id ?>">
+                        <?php endif; ?>
                         
                         <div class="text-center mb-3">
                             <?php if(!empty($row['photo'])): ?>
@@ -358,6 +549,57 @@ if($res->num_rows > 0):
 endif; 
 ?>
 
+<?php if($is_admin): ?>
+<!-- Modal Assign Guru -->
+<div class="modal fade" id="modalAssignGuru" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST">
+                <input type="hidden" name="bulk_assign" value="1">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Assign Guru per Kelas</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Pilih Kelas</label>
+                        <select name="target_class" class="form-select" required>
+                            <option value="">-- Pilih Kelas --</option>
+                            <?php foreach($class_options as $class_name_opt): ?>
+                                <option value="<?= htmlspecialchars($class_name_opt) ?>">
+                                    <?= htmlspecialchars($class_name_opt) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Guru Penanggung Jawab</label>
+                        <select name="target_teacher_id" class="form-select">
+                            <option value="">-- Kosongkan (hapus assign) --</option>
+                            <?php foreach($guru_options as $g): ?>
+                                <option value="<?= (int)$g['id'] ?>">
+                                    <?= htmlspecialchars($g['name']) ?><?= ($g['role'] ?? '') === 'admin' ? ' (Admin)' : '' ?><?= !empty($g['phone']) ? ' - ' . htmlspecialchars($g['phone']) : '' ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" value="1" id="overrideAssign" name="override">
+                        <label class="form-check-label" for="overrideAssign">
+                            Timpa assign yang sudah ada
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <!-- Modal Add -->
 <div class="modal fade" id="modalAdd" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
@@ -368,6 +610,21 @@ endif;
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <?php if($is_admin): ?>
+                        <div class="mb-3">
+                            <label class="form-label">Guru Penanggung Jawab</label>
+                            <select name="teacher_id" class="form-select">
+                                <option value="">-- Tidak ditentukan --</option>
+                                <?php foreach($guru_options as $g): ?>
+                                    <option value="<?= (int)$g['id'] ?>">
+                                        <?= htmlspecialchars($g['name']) ?><?= ($g['role'] ?? '') === 'admin' ? ' (Admin)' : '' ?><?= !empty($g['phone']) ? ' - ' . htmlspecialchars($g['phone']) : '' ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    <?php else: ?>
+                        <input type="hidden" name="teacher_id" value="<?= $current_user_id ?>">
+                    <?php endif; ?>
                     <div class="mb-3">
                         <label class="form-label">NIS</label>
                         <input type="text" name="nis" class="form-control" required placeholder="Ex: 1001">

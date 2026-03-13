@@ -1,4 +1,10 @@
-<?php require_once 'includes/db.php'; ?>
+<?php
+require_once 'includes/db.php';
+if (!isset($_SESSION['admin_logged_in'])) {
+    header("Location: login.php?next=" . urlencode('scan.php'));
+    exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -18,8 +24,11 @@
     <h5 class="mb-0 fw-bold text-white"><i class="fas fa-qrcode me-2" style="color: #3b82f6;"></i> Absen Digital</h5>
     <div>
         <span class="badge fw-medium fs-6 py-2 px-3 me-2" id="clock" style="background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #93c5fd;">00:00:00</span>
-        <a href="login.php" class="btn btn-outline-light btn-sm rounded-pill px-3">
-            <i class="fas fa-lock"></i> Admin
+        <a href="admin/index.php" class="btn btn-outline-light btn-sm rounded-pill px-3 me-2">
+            <i class="fas fa-gauge"></i> Dashboard
+        </a>
+        <a href="logout.php" class="btn btn-outline-light btn-sm rounded-pill px-3">
+            <i class="fas fa-right-from-bracket"></i> Logout
         </a>
     </div>
 </div>

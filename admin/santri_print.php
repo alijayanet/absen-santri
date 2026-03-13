@@ -7,25 +7,37 @@ if (!isset($_SESSION['admin_logged_in'])) {
     exit;
 }
 
-$id_filter = "";
+$current_role = $_SESSION['admin_role'] ?? 'admin';
+$is_admin = $current_role === 'admin';
+$current_user_id = (int)($_SESSION['admin_id'] ?? 0);
+
+$where_parts = [];
 $filter_label = "Semua";
 if (isset($_GET['id'])) {
     $id = (int)$_GET['id'];
-    $id_filter = "WHERE id = $id";
+    $where_parts[] = "id = $id";
 } elseif (isset($_GET['kelas']) && !empty($_GET['kelas'])) {
     $kelas = $conn->real_escape_string($_GET['kelas']);
-    $id_filter = "WHERE class_name = '$kelas'";
+    $where_parts[] = "class_name = '$kelas'";
     $filter_label = htmlspecialchars($_GET['kelas']);
 }
 
-$res = $conn->query("SELECT * FROM santri $id_filter ORDER BY class_name ASC, name ASC");
+if (!$is_admin) {
+    $where_parts[] = "teacher_id = $current_user_id";
+}
+$where = '';
+if (!empty($where_parts)) {
+    $where = "WHERE " . implode(' AND ', $where_parts);
+}
+
+$res = $conn->query("SELECT * FROM santri $where ORDER BY class_name ASC, name ASC");
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cetak ID Card - <?= $app_settings['app_name'] ?></title>
+    <title>Cetak ID Card - <?= htmlspecialchars($app_settings['app_name'], ENT_QUOTES, 'UTF-8') ?></title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/style.css">

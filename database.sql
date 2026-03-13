@@ -6,13 +6,14 @@ CREATE TABLE IF NOT EXISTS `users` (
   `username` varchar(50) NOT NULL,
   `password` varchar(255) NOT NULL,
   `name` varchar(100) NOT NULL,
+  `phone` varchar(20) DEFAULT '',
   `role` varchar(20) DEFAULT 'admin',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Password for admin is 'admin' (hashed)
-INSERT INTO `users` (`username`, `password`, `name`, `role`) VALUES
-('admin', '$2y$10$D5LCWF84a5ngXgAmQfQTXe6FDtCG0DVjOma4tn/9buxIGRcBQdRaS', 'Administrator', 'admin');
+INSERT INTO `users` (`username`, `password`, `name`, `phone`, `role`) VALUES
+('admin', '$2y$10$D5LCWF84a5ngXgAmQfQTXe6FDtCG0DVjOma4tn/9buxIGRcBQdRaS', 'Administrator', '', 'admin');
 
 CREATE TABLE IF NOT EXISTS `santri` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -22,11 +23,13 @@ CREATE TABLE IF NOT EXISTS `santri` (
   `gender` enum('L','P') NOT NULL,
   `parent_phone` varchar(20) NOT NULL,
   `photo` varchar(255) DEFAULT '',
+  `teacher_id` int(11) DEFAULT NULL,
   `qrcode_hash` varchar(100) NOT NULL,
   `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `nis` (`nis`),
-  UNIQUE KEY `qrcode_hash` (`qrcode_hash`)
+  UNIQUE KEY `qrcode_hash` (`qrcode_hash`),
+  KEY `idx_teacher_id` (`teacher_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `attendance` (
